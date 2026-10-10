@@ -26,6 +26,9 @@ export default function Home() {
           </button>
         ))}
       </div>
+      <button onClick={() => setSquares(Array(9).fill(null))} style={{ marginTop: 12 }}>
+        Restart
+      </button>
     </main>
   );
 }
