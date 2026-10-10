@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tasks</title>
+  <style>
+    :root {
+      --bg: #121216;
+      --card: #1c1c22;
+      --border: #2c2c35;
+      --text: #e6e6ec;
+      --muted: #8a8a96;
+      --accent: #9ac8ff;
+      --danger: #ff9aa2;
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 64px 16px;
+      font-family: system-ui, sans-serif;
+      color: var(--text);
+      background-color: var(--bg);
+      background-image: radial-gradient(#3a3a44 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    main { max-width: 480px; margin: 0 auto; }
+
+    h1 { margin: 0 0 20px; font-size: 28px; }
+
+    form { display: flex; gap: 8px; }
+
+    input[type="text"] {
+      flex: 1;
+      height: 48px;
+      padding: 0 16px;
+      font: inherit;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      outline: none;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    button {
+      height: 48px;
+      padding: 0 20px;
+      font: inherit;
+      color: var(--bg);
+      background: var(--accent);
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    ul { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 8px; }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 52px;
+      padding: 0 8px 0 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    li label { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer; overflow-wrap: anywhere; }
+
+    li input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+    li.done span { color: var(--muted); text-decoration: line-through; }
+
+    li button {
+      width: 44px;
+      padding: 0;
+      font-size: 22px;
+      color: var(--muted);
+      background: none;
+    }
+
+    li button:hover { color: var(--danger); }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      color: var(--muted);
+    }
+
+    footer button { color: var(--muted); background: none; padding: 0 4px; }
+
+    footer button:hover { color: var(--text); }
+
+    .empty { margin-top: 24px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Tasks</h1>
+    <form id="add">
+      <input type="text" id="title" placeholder="What needs doing?" aria-label="New task" autocomplete="off" required>
+      <button>Add</button>
+    </form>
+    <ul id="list"></ul>
+    <p class="empty" id="empty">No tasks yet.</p>
+    <footer id="footer">
+      <span id="count"></span>
+      <button id="clear">Clear done</button>
+    </footer>
+  </main>
+
+  <script>
+    const KEY = "tasks";
+    let tasks = load();
+
+    function load() {
+      try {
+        return JSON.parse(localStorage.getItem(KEY)) ?? [];
+      } catch {
+        return [];
+      }
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(tasks));
+      } catch {
+        // Private mode or full storage: tasks still work for this visit.
+      }
+    }
+
+    function render() {
+      const list = document.getElementById("list");
+      list.replaceChildren(...tasks.map((task) => {
+        const li = document.createElement("li");
+        li.className = task.done ? "done" : "";
+
+        const label = document.createElement("label");
+        const check = document.createElement("input");
+        check.type = "checkbox";
+        check.checked = task.done;
+        check.onchange = () => update(tasks.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
+        const text = document.createElement("span");
+        text.textContent = task.title;
+        label.append(check, text);
+
+        const remove = document.createElement("button");
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Delete ${task.title}`);
+        remove.onclick = () => update(tasks.filter((t) => t.id !== task.id));
+
+        li.append(label, remove);
+        return li;
+      }));
+
+      const left = tasks.filter((t) => !t.done).length;
+      document.getElementById("count").textContent = `${left} left`;
+      document.getElementById("empty").hidden = tasks.length > 0;
+      document.getElementById("footer").hidden = tasks.length === 0;
+      document.getElementById("clear").hidden = left === tasks.length;
+    }
+
+    function update(next) {
+      tasks = next;
+      save();
+      render();
+    }
+
+    document.getElementById("add").onsubmit = (e) => {
+      e.preventDefault();
+      const input = document.getElementById("title");
+      const title = input.value.trim();
+      if (!title) return;
+      update([...tasks, { id: crypto.randomUUID(), title, done: false }]);
+      input.value = "";
+    };
+
+    document.getElementById("clear").onclick = () => update(tasks.filter((t) => !t.done));
+
+    render();
+  </script>
+</body>
+</html>
